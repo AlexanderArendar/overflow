@@ -59,6 +59,7 @@ class ImageViewportState extends State<ImageViewport> {
   double _maxVerticalDelta;
   Offset _normalized;
   bool _denormalize = false;
+  Offset _dot = Offset(0, 0);
 
   double abs(double value) {
     return value < 0 ? value * (-1) : value;
@@ -94,14 +95,14 @@ class ImageViewportState extends State<ImageViewport> {
 
   @override
   Widget build(BuildContext context) {
-
-    void handleDrag(DragUpdateDetails updateDetails){
+    void handleDrag(DragUpdateDetails updateDetails) {
       Offset newOffset = _centerOffset.translate(-updateDetails.delta.dx, -updateDetails.delta.dy);
       if (abs(newOffset.dx) <= _maxHorizontalDelta && abs(newOffset.dy) <= _maxVerticalDelta)
         setState(() {
           _centerOffset = newOffset;
         });
     }
+
     return _resolved
         ? LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
@@ -117,13 +118,35 @@ class ImageViewportState extends State<ImageViewport> {
                 _centerOffset = Offset(_maxHorizontalDelta * _normalized.dx, _maxVerticalDelta * _normalized.dy);
                 _denormalize = false;
               }
+
+              Offset globaltoLocalOffset(Offset value) {
+                double hDelta = (actualImageWidth / 2) * value.dx;
+                double vDelta = (actualImageHeight / 2) * value.dy;
+                double dx = (hDelta - _centerOffset.dx) + (viewportWidth / 2);
+                double dy = (vDelta - _centerOffset.dy) + (viewportHeight / 2);
+                return Offset(dx, dy);
+              }
+
               return GestureDetector(
                 onPanUpdate: reactOnPan ? handleDrag : null,
                 onHorizontalDragUpdate: reactOnHorizontalDrag && !reactOnPan ? handleDrag : null,
                 onVerticalDragUpdate: !reactOnHorizontalDrag && !reactOnPan ? handleDrag : null,
-                child: CustomPaint(
-                  size: Size(viewportWidth, viewportHeight),
-                  painter: MapPainter(_image, _zoomLevel, _centerOffset),
+                child: Stack(
+                  children: <Widget>[
+                    CustomPaint(
+                      size: Size(viewportWidth, viewportHeight),
+                      painter: MapPainter(_image, _zoomLevel, _centerOffset),
+                    ),
+                    Positioned(
+                      left: globaltoLocalOffset(_dot).dx - 10,
+                      top: globaltoLocalOffset(_dot).dy - 10,
+                      child: Container(
+                        color: Colors.red,
+                        width: 20,
+                        height: 20,
+                      ),
+                    ),
+                  ],
                 ),
               );
             },
