@@ -19,6 +19,22 @@ class MyApp extends StatelessWidget {
   }
 }
 
+class MapObject {
+  final Widget child;
+
+  ///relative offset from the center of the map for this map object. From -1 to 1 in each dimension.
+  final Offset offset;
+
+  ///size of this image for the zoomLevel == 1
+  final Size size;
+
+  MapObject({
+    @required this.child,
+    @required this.offset,
+    this.size,
+  });
+}
+
 class _ImageViewportState extends State<ImageViewport> {
   double _zoomLevel;
   ImageProvider _imageProvider;
@@ -32,7 +48,7 @@ class _ImageViewportState extends State<ImageViewport> {
   Size _actualImageSize;
   Size _viewportSize;
 
-  List<Offset> _objects;
+  List<MapObject> _objects;
 
   double abs(double value) {
     return value < 0 ? value * (-1) : value;
@@ -106,18 +122,52 @@ class _ImageViewportState extends State<ImageViewport> {
         });
     }
 
-    List<Widget> _buildObjects() {
+    void addMapObject(MapObject object) => setState(() {
+          _objects.add(object);
+        });
+
+    void removeMapObject(MapObject object) => setState(() {
+          _objects.remove(object);
+        });
+
+    List<Widget> buildObjects() {
       return _objects
           .map(
-            (object) => Positioned(
-                  left: _globaltoLocalOffset(object).dx - 10,
-                  top: _globaltoLocalOffset(object).dy - 10,
+            (MapObject object) => Positioned(
+                  left: _globaltoLocalOffset(object.offset).dx - (object.size == null ? 0 : (object.size.width * _zoomLevel) / 2),
+                  top: _globaltoLocalOffset(object.offset).dy - (object.size == null ? 0 : (object.size.height * _zoomLevel) / 2),
                   child: GestureDetector(
-                    onTap: () => print("object clicked"),
+                    onTapUp: (TapUpDetails details) {
+                      MapObject info;
+                      info = MapObject(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                              border: Border.all(
+                            width: 1,
+                          )),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              Text("Close me"),
+                              SizedBox(
+                                width: 5,
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.close),
+                                onPressed: () => removeMapObject(info),
+                              ),
+                            ],
+                          ),
+                        ),
+                        offset: object.offset,
+                        size: null,
+                      );
+                      addMapObject(info);
+                    },
                     child: Container(
-                      color: Colors.red,
-                      width: 20,
-                      height: 20,
+                      width: object.size == null ? null : object.size.width * _zoomLevel,
+                      height: object.size == null ? null : object.size.height * _zoomLevel,
+                      child: object.child,
                     ),
                   ),
                 ),
@@ -146,9 +196,14 @@ class _ImageViewportState extends State<ImageViewport> {
                   RenderBox box = context.findRenderObject();
                   Offset localPosition = box.globalToLocal(details.globalPosition);
                   Offset newObjectOffset = _localToGlobalOffset(localPosition);
-                  setState(() {
-                    _objects.add(newObjectOffset);
-                  });
+                  MapObject newObject = MapObject(
+                    child: Container(
+                      color: Colors.blue,
+                    ),
+                    offset: newObjectOffset,
+                    size: Size(10, 10),
+                  );
+                  addMapObject(newObject);
                 },
                 child: Stack(
                   children: <Widget>[
@@ -157,7 +212,7 @@ class _ImageViewportState extends State<ImageViewport> {
                           painter: MapPainter(_image, _zoomLevel, _centerOffset),
                         ),
                       ] +
-                      _buildObjects(),
+                      buildObjects(),
                 ),
               );
             },
@@ -169,7 +224,7 @@ class _ImageViewportState extends State<ImageViewport> {
 class ImageViewport extends StatefulWidget {
   final double zoomLevel;
   final ImageProvider imageProvider;
-  final List<Offset> objects;
+  final List<MapObject> objects;
 
   ImageViewport({
     @required this.zoomLevel,
@@ -207,15 +262,13 @@ class MapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(CustomPainter oldDelegate) {
-    return true;
-  }
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 
 class ZoomContainerState extends State<ZoomContainer> {
   double _zoomLevel;
   ImageProvider _imageProvider;
-  List<Offset> _objects;
+  List<MapObject> _objects;
 
   @override
   void initState() {
@@ -267,7 +320,7 @@ class ZoomContainerState extends State<ZoomContainer> {
 class ZoomContainer extends StatefulWidget {
   final double zoomLevel;
   final ImageProvider imageProvider;
-  final List<Offset> objects;
+  final List<MapObject> objects;
 
   ZoomContainer({
     this.zoomLevel = 1,
@@ -293,9 +346,13 @@ class MyHomePage extends StatelessWidget {
           zoomLevel: 4,
           imageProvider: Image.asset("assets/map.jpg").image,
           objects: [
-            Offset(0, 0),
-            Offset(0.5, 0.25),
-            Offset(-0.5, -0.5),
+            MapObject(
+              child: Container(
+                color: Colors.red,
+              ),
+              offset: Offset(0, 0),
+              size: Size(10, 10),
+            ),
           ],
         ),
       ),
