@@ -74,12 +74,26 @@ class _ImageViewportState extends State<ImageViewport> {
     _updateActualImageDimensions();
   }
 
+  ///This is used to convert map objects relative global offsets from the map center
+  ///to the local viewport offset from the top left viewport corner.
   Offset _globaltoLocalOffset(Offset value) {
     double hDelta = (_actualImageSize.width / 2) * value.dx;
     double vDelta = (_actualImageSize.height / 2) * value.dy;
     double dx = (hDelta - _centerOffset.dx) + (_viewportSize.width / 2);
     double dy = (vDelta - _centerOffset.dy) + (_viewportSize.height / 2);
     return Offset(dx, dy);
+  }
+
+  ///This is used to convert global coordinates of long press event on the map to relative global offsets from the map center
+  Offset _localToGlobalOffset(Offset value) {
+    double dx = value.dx - _viewportSize.width / 2;
+    double dy = value.dy - _viewportSize.height / 2;
+    double dh = dx + _centerOffset.dx;
+    double dv = dy + _centerOffset.dy;
+    return Offset(
+      dh / (_actualImageSize.width / 2),
+      dv / (_actualImageSize.height / 2),
+    );
   }
 
   @override
@@ -92,18 +106,23 @@ class _ImageViewportState extends State<ImageViewport> {
         });
     }
 
-    List<Widget> buildObjects() {
-      return _objects.map(
-        (object) => Positioned(
-              left: _globaltoLocalOffset(object).dx - 10,
-              top: _globaltoLocalOffset(object).dy - 10,
-              child: Container(
-                color: Colors.red,
-                width: 20,
-                height: 20,
-              ),
-            ),
-      ).toList();
+    List<Widget> _buildObjects() {
+      return _objects
+          .map(
+            (object) => Positioned(
+                  left: _globaltoLocalOffset(object).dx - 10,
+                  top: _globaltoLocalOffset(object).dy - 10,
+                  child: GestureDetector(
+                    onTap: () => print("object clicked"),
+                    child: Container(
+                      color: Colors.red,
+                      width: 20,
+                      height: 20,
+                    ),
+                  ),
+                ),
+          )
+          .toList();
     }
 
     return _resolved
@@ -123,13 +142,22 @@ class _ImageViewportState extends State<ImageViewport> {
                 onPanUpdate: reactOnPan ? handleDrag : null,
                 onHorizontalDragUpdate: reactOnHorizontalDrag && !reactOnPan ? handleDrag : null,
                 onVerticalDragUpdate: !reactOnHorizontalDrag && !reactOnPan ? handleDrag : null,
+                onLongPressEnd: (LongPressEndDetails details) {
+                  RenderBox box = context.findRenderObject();
+                  Offset localPosition = box.globalToLocal(details.globalPosition);
+                  Offset newObjectOffset = _localToGlobalOffset(localPosition);
+                  setState(() {
+                    _objects.add(newObjectOffset);
+                  });
+                },
                 child: Stack(
                   children: <Widget>[
-                    CustomPaint(
-                      size: _viewportSize,
-                      painter: MapPainter(_image, _zoomLevel, _centerOffset),
-                    ),
-                  ] + buildObjects(),
+                        CustomPaint(
+                          size: _viewportSize,
+                          painter: MapPainter(_image, _zoomLevel, _centerOffset),
+                        ),
+                      ] +
+                      _buildObjects(),
                 ),
               );
             },
