@@ -25,7 +25,7 @@ class MapObject {
   ///relative offset from the center of the map for this map object. From -1 to 1 in each dimension.
   final Offset offset;
 
-  ///size of this image for the zoomLevel == 1
+  ///size of this object for the zoomLevel == 1
   final Size size;
 
   MapObject({
@@ -82,6 +82,7 @@ class _ImageViewportState extends State<ImageViewport> {
 
   @override
   void didUpdateWidget(ImageViewport oldWidget) {
+    super.didUpdateWidget(oldWidget);
     double normalizedDx = _maxHorizontalDelta == 0 ? 0 : _centerOffset.dx / _maxHorizontalDelta;
     double normalizedDy = _maxVerticalDelta == 0 ? 0 : _centerOffset.dy / _maxVerticalDelta;
     _normalized = Offset(normalizedDx, normalizedDy);
@@ -344,7 +345,7 @@ class MyHomePage extends StatelessWidget {
       body: Center(
         child: ZoomContainer(
           zoomLevel: 4,
-          imageProvider: Image.asset("assets/map.jpg").image,
+          imageProvider: Image.asset("assets/map.png").image,
           objects: [
             MapObject(
               child: Container(
