@@ -68,9 +68,7 @@ class _ImageViewportState extends State<ImageViewport> {
     _objects = widget.objects;
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  void _resolveImageProvider(){
     ImageStream stream = _imageProvider.resolve(createLocalImageConfiguration(context));
     stream.addListener((info, _) {
       _image = info.image;
@@ -81,8 +79,18 @@ class _ImageViewportState extends State<ImageViewport> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _resolveImageProvider();
+  }
+
+  @override
   void didUpdateWidget(ImageViewport oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if(widget.imageProvider != _imageProvider) {
+      _imageProvider = widget.imageProvider;
+      _resolveImageProvider();
+    }
     double normalizedDx = _maxHorizontalDelta == 0 ? 0 : _centerOffset.dx / _maxHorizontalDelta;
     double normalizedDy = _maxVerticalDelta == 0 ? 0 : _centerOffset.dy / _maxVerticalDelta;
     _normalized = Offset(normalizedDx, normalizedDy);
@@ -277,6 +285,12 @@ class ZoomContainerState extends State<ZoomContainer> {
     _zoomLevel = widget.zoomLevel;
     _imageProvider = widget.imageProvider;
     _objects = widget.objects;
+  }
+
+  @override
+  void didUpdateWidget(ZoomContainer oldWidget){
+    super.didUpdateWidget(oldWidget);
+    if(widget.imageProvider != _imageProvider) _imageProvider = widget.imageProvider;
   }
 
   @override
