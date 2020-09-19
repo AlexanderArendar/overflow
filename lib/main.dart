@@ -70,12 +70,13 @@ class _ImageViewportState extends State<ImageViewport> {
 
   void _resolveImageProvider(){
     ImageStream stream = _imageProvider.resolve(createLocalImageConfiguration(context));
-    stream.addListener((info, _) {
+    stream.addListener(ImageStreamListener((info, _) {
+      print(info);
       _image = info.image;
       _resolved = true;
       _updateActualImageDimensions();
       setState(() {});
-    });
+    }));
   }
 
   @override
